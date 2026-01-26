@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node --env-file=.env.dev index.js",
-    "dev": "nodemon --env-file=.env.dev index.js"
+    "start": "tsc && node --env-file=.env.dev ./dist/server.js",
+    "test": "tsc && jest --detectOpenHandles --forceExit",
+    "dev": "nodemon --env-file=.env.dev ./dist/server.js"
   },
   "author": "Shir Hershkovich & Neriya Persiko",
   "license": "ISC",
@@ -16,6 +17,15 @@
     "mongoose": "^9.1.5"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "@eslint/js": "^9.39.2",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.0.10",
+    "eslint": "^9.39.2",
+    "globals": "^17.1.0",
+    "nodemon": "^3.1.11",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.53.1"
   }
 }
