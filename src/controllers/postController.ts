@@ -1,12 +1,22 @@
 import { Request, Response } from "express";
 import Post from "../models/Post";
+import { authRequest as AuthRequest } from "../middleware/authMiddleware";
 
 // Create a new post
-const createPost = async (req: Request, res: Response) => {
-  const content = req.body;
+const createPost = async (req: AuthRequest, res: Response) => {
   try {
-    const response = await Post.create(content);
-    res.status(201).json(response);
+    if (!req.user?._id) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { message, title } = req.body;
+
+    const post = await Post.create({
+      sender: req.user._id,
+      message,
+      title,
+    });
+    res.status(201).json(post);
   } catch (error) {
     console.error("Error creating post:", error);
     res.status(400).send("Error creating post");

@@ -1,10 +1,11 @@
 import express from "express";
 import postController from "../controllers/postController";
+import authMiddleware from "../middleware/authMiddleware";
 
 const router = express.Router();
 
 // create post
-router.post("/", postController.createPost);
+router.post("/", authMiddleware, postController.createPost);
 
 // get all posts or posts by sender
 router.get("/", postController.getPosts);
@@ -13,6 +14,6 @@ router.get("/", postController.getPosts);
 router.get("/:id", postController.getPostById);
 
 // update post by id
-router.put("/:id", postController.updatePostById);
+router.put("/:id", authMiddleware, postController.updatePostById);
 
 export default router;
