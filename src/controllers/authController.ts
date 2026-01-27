@@ -16,7 +16,6 @@ const generateToken = (userId: string): string => {
 };
 
 const register = async (req: Request, res: Response): Promise<void> => {
-  // Registration logic here
   // extract user details from req.body
   const { email, password } = req.body;
   if (!email || !password) {

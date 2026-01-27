@@ -13,8 +13,8 @@ afterAll((done) => {
   done();
 });
 
-describe("POST /auth/register", () => {
-  it("should register a new user", async () => {
+describe("Auth API", () => {
+  test("should register a new user", async () => {
     const response = await request(app).post("/auth/register").send({
       email: "test@example.com",
       password: "securePassword123",
@@ -23,10 +23,8 @@ describe("POST /auth/register", () => {
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty("token");
   });
-});
 
-describe("POST /auth/login", () => {
-  it("should login existing user", async () => {
+  test("should login existing user", async () => {
     const response = await request(app).post("/auth/login").send({
       email: "test@example.com",
       password: "securePassword123",
