@@ -1,6 +1,8 @@
 import { Express } from "express";
 import request from "supertest";
 import User from "../models/User";
+import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 
 type UserData = {
   email: string;
@@ -58,3 +60,11 @@ export const registerTestUser = async (app: Express) => {
   userData._id = res.body.userId;
   userData.token = res.body.token;
 };
+
+export const fakeUserId = new mongoose.Types.ObjectId().toString();
+
+export const fakeToken = jwt.sign(
+  { userId: fakeUserId },
+  process.env.JWT_SECRET!,
+  { expiresIn: "1h" },
+);

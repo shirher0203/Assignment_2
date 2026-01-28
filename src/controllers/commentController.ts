@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import Comment from "../models/Comment";
 import Post from "../models/Post";
+import { AuthRequest } from "../middleware/authMiddleware";
 
 // Get all comments by postId
 const getCommentsByPost = async (req: Request, res: Response) => {
@@ -49,17 +50,24 @@ const updateComment = async (req: Request, res: Response) => {
 };
 
 // Create a new comment
-const addComment = async (req: Request, res: Response) => {
-  const content = req.body;
+const addComment = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user?._id) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const { message, postId } = req.body;
     // Check if postId exists
-    const post = await Post.findById(content.postId);
+    const post = await Post.findById(postId);
     if (!post) {
       return res
         .status(404)
         .json({ message: "Post not found for this comment" });
     }
-    const response = await Comment.create(content);
+    const response = await Comment.create({
+      sender: req.user._id,
+      postId,
+      message,
+    });
     res.status(201).json(response);
   } catch (error) {
     console.error("Error creating comment:", error);

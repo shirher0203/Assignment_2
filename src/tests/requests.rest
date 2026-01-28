@@ -38,7 +38,7 @@ Content-Type: application/json
 {
     "sender": "Alice",
     "message": "This is a comment!!!!",
-    "postId": "696fff7ee600df766246eb8d"
+    "postId": "6979f68000ca063f281ed4a7"
 }
 
 ###
