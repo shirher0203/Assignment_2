@@ -31,9 +31,13 @@ const register = async (req: Request, res: Response): Promise<void> => {
 
     // generate auth token
     const token = generateToken(user._id.toString());
+    const userId = user._id.toString();
 
     //send token to user
-    res.status(201).json({ token: token });
+    res.status(201).json({
+      token: token,
+      userId: userId,
+    });
   } catch {
     return sendError(res, "Error registering user");
   }
