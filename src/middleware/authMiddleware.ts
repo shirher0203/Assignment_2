@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-export type authRequest = Request & { user?: { _id: string } };
+export type AuthRequest = Request & { user?: { _id: string } };
 
 const authMiddleware = (
-  req: authRequest,
+  req: AuthRequest,
   res: Response,
   next: NextFunction,
 ) => {
