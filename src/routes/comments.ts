@@ -4,6 +4,9 @@ import authMiddleware from "../middleware/authMiddleware";
 
 const router = express.Router();
 
+//get all comments
+router.get("/", commentController.getAllComments);
+
 // get all comments by postId
 router.get("/post/:postId", commentController.getCommentsByPost);
 

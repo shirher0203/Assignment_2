@@ -37,10 +37,16 @@ export const singlePostData: PostData = {
 
 export type CommentsData = {
   message: string;
-  postId: string;
+  postId?: string;
   sender?: string;
   _id?: string;
 };
+
+export const commentsData: CommentsData[] = [
+  { message: "great post!" },
+  { message: "good!" },
+  { message: "like it" },
+];
 
 export const registerTestUser = async (app: Express) => {
   await User.deleteMany({ email: userData.email });
@@ -51,6 +57,7 @@ export const registerTestUser = async (app: Express) => {
   });
   userData._id = res.body.userId;
   userData.token = res.body.token;
+  userData.refreshToken = res.body.refreshToken;
 };
 
 export const fakeUserId = new mongoose.Types.ObjectId().toString();
