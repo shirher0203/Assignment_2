@@ -13,8 +13,8 @@ type UserData = {
 };
 
 export const userData: UserData = {
-  email: "test@testMovies.com",
-  password: "testpasswordMovies",
+  email: "test@test.com",
+  password: "testpassword",
 };
 
 export type PostData = {
@@ -31,24 +31,16 @@ export const postsData: PostData[] = [
 ];
 
 export const singlePostData: PostData = {
-  title: "Movie A",
+  title: "post A",
   message: "hello this is my first post",
 };
 
 export type CommentsData = {
   message: string;
-  movieId: string;
-  writerId?: string;
+  postId: string;
+  sender?: string;
   _id?: string;
 };
-
-export const commentsData: CommentsData[] = [
-  { message: "Great movie!", movieId: "movie1" },
-  { message: "Loved it!", movieId: "movie1" },
-  { message: "Not bad.", movieId: "movie2" },
-  { message: "Worst movie ever.", movieId: "movie2" },
-  { message: "Could be better.", movieId: "movie3" },
-];
 
 export const registerTestUser = async (app: Express) => {
   await User.deleteMany({ email: userData.email });
