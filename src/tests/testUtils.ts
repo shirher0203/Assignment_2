@@ -50,8 +50,8 @@ export const registerTestUser = async (app: Express) => {
     password: userData.password,
   });
   userData._id = res.body.userId;
-  userData.token = res.body.tokens.token;
-  userData.refreshToken = res.body.tokens.refreshToken;
+  userData.token = res.body.token;
+  userData.refreshToken = res.body.refreshToken;
 };
 
 export const fakeUserId = new mongoose.Types.ObjectId().toString();
