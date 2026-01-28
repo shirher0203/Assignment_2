@@ -37,10 +37,16 @@ export const singlePostData: PostData = {
 
 export type CommentsData = {
   message: string;
-  postId: string;
+  postId?: string;
   sender?: string;
   _id?: string;
 };
+
+export const commentsData: CommentsData[] = [
+  { message: "great post!" },
+  { message: "good!" },
+  { message: "like it" },
+];
 
 export const registerTestUser = async (app: Express) => {
   await User.deleteMany({ email: userData.email });
