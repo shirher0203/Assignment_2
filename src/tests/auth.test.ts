@@ -3,8 +3,10 @@ import initApp from "../index";
 import { Express } from "express";
 import User from "../models/User";
 import Post from "../models/Post";
+import { userData, singlePostData } from "./testUtils";
 
 let app: Express;
+
 beforeAll(async () => {
   app = await initApp();
   await User.deleteMany({});
@@ -15,78 +17,61 @@ afterAll((done) => {
   done();
 });
 
-const userCredentials = {
-  email: "test@example.com",
-  password: "securePassword123",
-  _id: "",
-  token: "",
-};
-
-type Post = {
-  message: string;
-  title: string;
-  _id?: string;
-};
-const postData: Post = {
-  message: "This is a test post message.",
-  title: "Test Post",
-};
-
 describe("Auth API", () => {
   test("access restricted url denied without token", async () => {
-    const response = await request(app).post("/post/").send({ postData });
+    const response = await request(app).post("/post/").send({ singlePostData });
     expect(response.status).toBe(401);
   });
 
   test("should register a new user", async () => {
     const response = await request(app).post("/auth/register").send({
-      email: userCredentials.email,
-      password: userCredentials.password,
+      email: userData.email,
+      password: userData.password,
     });
 
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty("token");
-    userCredentials.token = response.body.token;
-    userCredentials._id = response.body.userId;
+    userData.token = response.body.token;
+    userData._id = response.body.userId;
   });
 
   test("access with token peremitted after registration", async () => {
     const response = await request(app)
       .post("/post/")
-      .set("Authorization", `Bearer ${userCredentials.token}`)
-      .send(postData);
+      .set("Authorization", `Bearer ${userData.token}`)
+      .send(singlePostData);
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty("_id");
   });
 
   test("access with modified token restricted", async () => {
-    const fakeToken = userCredentials.token + "manipulation";
+    const fakeToken = userData.token + "manipulation";
     const response = await request(app)
       .post("/post/")
       .set("Authorization", `Bearer ${fakeToken}`)
-      .send(postData);
+      .send(singlePostData);
     expect(response.status).toBe(401);
   });
 
   test("should login existing user", async () => {
     const response = await request(app).post("/auth/login").send({
-      email: userCredentials.email,
-      password: userCredentials.password,
+      email: userData.email,
+      password: userData.password,
     });
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("token");
-    userCredentials.token = response.body.token;
+    userData.token = response.body.token;
   });
 
   test("access with token peremitted after login", async () => {
     const response = await request(app)
       .post("/post/")
-      .set("Authorization", `Bearer ${userCredentials.token}`)
-      .send(postData);
+      .set("Authorization", `Bearer ${userData.token}`)
+      .send(singlePostData);
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty("_id");
-    postData._id = response.body._id;
+    singlePostData._id = response.body._id;
   });
 
   // set jest timeout to 10 seconds for this test
@@ -96,8 +81,8 @@ describe("Auth API", () => {
     await new Promise((r) => setTimeout(r, 6000)); // wait for 6 seconds
     const response = await request(app)
       .post("/post/")
-      .set("Authorization", `Bearer ${userCredentials.token}`)
-      .send(postData);
+      .set("Authorization", `Bearer ${userData.token}`)
+      .send(singlePostData);
     expect(response.status).toBe(401);
     expect(response.body).toHaveProperty("error", "Invalid token");
   });
