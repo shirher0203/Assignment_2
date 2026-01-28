@@ -70,7 +70,7 @@ describe("Posts API", () => {
     expect(response.body._id).toBe(postsData[0]._id);
   });
 
-  test("test put movie by id", async () => {
+  test("test put post by id", async () => {
     postsData[0].message = "hello this is updated message";
     const response = await request(app)
       .put("/post/" + postsData[0]._id)
@@ -81,7 +81,7 @@ describe("Posts API", () => {
     expect(response.body.message).toBe(postsData[0].message);
   });
 
-  test("test put movie by id without token - should fail", async () => {
+  test("test put post by id without token - should fail", async () => {
     postsData[0].message = "hello this is updated message";
     const response = await request(app)
       .put("/post/" + postsData[0]._id)
@@ -89,7 +89,7 @@ describe("Posts API", () => {
     expect(response.statusCode).toBe(401);
   });
 
-  test("test put movie by id with wrong token - should fail", async () => {
+  test("test put post by id with wrong token - should fail", async () => {
     postsData[0].message = "hello this is updated message";
     const response = await request(app)
       .put("/post/" + postsData[0]._id)

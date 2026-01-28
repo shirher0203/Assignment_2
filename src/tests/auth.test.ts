@@ -31,8 +31,10 @@ describe("Auth API", () => {
 
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty("token");
+    expect(response.body).toHaveProperty("refreshToken");
     userData.token = response.body.token;
     userData._id = response.body.userId;
+    userData.refreshToken = response.body.refreshToken;
   });
 
   test("access with token peremitted after registration", async () => {
@@ -53,7 +55,7 @@ describe("Auth API", () => {
     expect(response.status).toBe(401);
   });
 
-  test("should login existing user", async () => {
+  test("test login existing user", async () => {
     const response = await request(app).post("/auth/login").send({
       email: userData.email,
       password: userData.password,
@@ -61,7 +63,9 @@ describe("Auth API", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("token");
+    expect(response.body).toHaveProperty("refreshToken");
     userData.token = response.body.token;
+    userData.refreshToken = response.body.refreshToken;
   });
 
   test("access with token peremitted after login", async () => {
@@ -76,7 +80,7 @@ describe("Auth API", () => {
 
   // set jest timeout to 10 seconds for this test
   jest.setTimeout(10000);
-  test("test expired token access restriction", async () => {
+  test("test token expiration", async () => {
     // Assuming the token expiration is set to 5 seconds in the test env
     await new Promise((r) => setTimeout(r, 6000)); // wait for 6 seconds
     const response = await request(app)
@@ -85,5 +89,48 @@ describe("Auth API", () => {
       .send(singlePostData);
     expect(response.status).toBe(401);
     expect(response.body).toHaveProperty("error", "Invalid token");
+
+    // get new token using refresh token
+    const refreshResponse = await request(app)
+      .post("/auth/refresh-token")
+      .send({ refreshToken: userData.refreshToken });
+    expect(refreshResponse.status).toBe(200);
+    expect(refreshResponse.body).toHaveProperty("token");
+    expect(refreshResponse.body).toHaveProperty("refreshToken");
+    userData.token = refreshResponse.body.token;
+    userData.refreshToken = refreshResponse.body.refreshToken;
+
+    // access again with new token
+    const postResponse = await request(app)
+      .post("/post/")
+      .set("Authorization", `Bearer ${userData.token}`)
+      .send(singlePostData);
+    expect(postResponse.status).toBe(201);
+    expect(postResponse.body).toHaveProperty("_id");
+  });
+
+  // test double use of refresh token
+  test("test double use of refresh token", async () => {
+    // get new token using refresh token
+    const refreshResponse = await request(app)
+      .post("/auth/refresh-token")
+      .send({ refreshToken: userData.refreshToken });
+    expect(refreshResponse.status).toBe(200);
+    expect(refreshResponse.body).toHaveProperty("token");
+    expect(refreshResponse.body).toHaveProperty("refreshToken");
+    const firstNewRefreshToken = refreshResponse.body.refreshToken;
+
+    // try to use the same refresh token again
+    const secondRefreshResponse = await request(app)
+      .post("/auth/refresh-token")
+      .send({ refreshToken: userData.refreshToken });
+    expect(secondRefreshResponse.status).toBe(400);
+
+    // try to use the first new refresh token - should fail
+    const thirdRefreshResponse = await request(app)
+      .post("/auth/refresh-token")
+      .send({ refreshToken: firstNewRefreshToken });
+    expect(thirdRefreshResponse.status).toBe(400);
+    expect(thirdRefreshResponse.body).toHaveProperty("error");
   });
 });
