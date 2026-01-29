@@ -12,7 +12,7 @@ const createPost = async (req: AuthRequest, res: Response) => {
     }
 
     const { message, title } = req.body;
-
+    // Always use user id from token as sender
     const post = await Post.create({
       sender: req.user._id,
       message,

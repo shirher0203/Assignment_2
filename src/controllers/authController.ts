@@ -28,16 +28,25 @@ const generateToken = (userId: string): Tokens => {
 
 const register = async (req: Request, res: Response): Promise<void> => {
   // extract user details from req.body
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return sendError(res, "Email and password are required");
+  const { email, password, username } = req.body;
+  if (!email || !password || !username) {
+    return sendError(res, "Email, password and username are required");
   }
 
   try {
+    // Check for unique email and username
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return sendError(res, "Email already exists");
+    }
+    const existingUsername = await User.findOne({ username });
+    if (existingUsername) {
+      return sendError(res, "Username already exists");
+    }
     // hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    const user = await User.create({ email, password: hashedPassword });
+    const user = await User.create({ email, password: hashedPassword, username });
 
     // generate auth token
     const tokens = generateToken(user._id.toString());
@@ -52,7 +61,8 @@ const register = async (req: Request, res: Response): Promise<void> => {
       refreshToken: tokens.refreshToken,
       userId: userId,
     });
-  } catch {
+  } catch (err) {
+    console.error("Error registering user:", err);
     return sendError(res, "Error registering user");
   }
 };
