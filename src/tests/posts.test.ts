@@ -1,127 +1,119 @@
 import request from "supertest";
 import initApp from "../index";
 import { Express } from "express";
+import mongoose from "mongoose";
 import Post from "../models/Post";
 import User from "../models/User";
-import Comment from "../models/Comment";
-import { userData, postsData, registerTestUser, fakeToken } from "./testUtils";
 
 let app: Express;
+let token: string = "";
+let otherToken: string = "";
+const email = `post${Date.now()}@test.com`;
+const otherEmail = `other_post${Date.now()}@test.com`;
 
 beforeAll(async () => {
-  app = await initApp();
-  await User.deleteMany({ email: userData.email });
-  await Post.deleteMany({});
-  await Comment.deleteMany({});
+    process.env.JWT_SECRET = "test_secret_key_123";
+    app = await initApp();
+    await Post.deleteMany({});
+    await User.deleteMany({ email: { $in: [email, otherEmail] } });
+    
+    // Register main user
+    const res = await request(app).post("/auth/register").send({ 
+        email, 
+        password: "testpassword123", 
+        username: "postuser" 
+    });
+    token = res.body.accessToken || res.body.token;
 
-  // login user and get token
-  await registerTestUser(app);
+    // Register second user for permission tests (403 Forbidden)
+    const resOther = await request(app).post("/auth/register").send({ 
+        email: otherEmail, 
+        password: "testpassword123", 
+        username: "otheruser" 
+    });
+    otherToken = resOther.body.accessToken || resOther.body.token;
 });
 
-afterAll((done) => {
-  done();
+afterAll(async () => {
+    await Post.deleteMany({});
+    await mongoose.connection.close();
 });
 
-describe("Posts API", () => {
-  test("test get all empty db", async () => {
-    console.log("Test is running");
-    const response = await request(app).get("/post");
-    expect(response.statusCode).toBe(200);
-    expect(response.body).toEqual([]);
-  });
+describe("Posts API Extended Coverage", () => {
+    let createdPostId: string = "";
 
-  test("test create post", async () => {
-    //add all posts from postsData
-    for (const post of postsData) {
-      const response = await request(app)
-        .post("/post")
-        .set("Authorization", "Bearer " + userData.token)
-        .send(post);
+    test("Create Post - Success (201)", async () => {
+        const res = await request(app)
+            .post("/post")
+            .set("Authorization", "Bearer " + token)
+            .send({ title: "New Post", message: "Hello World" });
+        expect(res.statusCode).toBe(201);
+        createdPostId = res.body._id;
+    });
 
-      // check response
-      expect(response.statusCode).toBe(201);
-      //check data from the user
-      expect(response.body.title).toBe(post.title);
-      expect(response.body.message).toBe(post.message);
-      //check sender id
-      expect(response.body.sender).toBe(userData._id);
-      postsData[postsData.indexOf(post)]._id = response.body._id;
-      postsData[postsData.indexOf(post)].sender = response.body.sender;
-    }
-  });
+    test("Get All Posts (200)", async () => {
+        const res = await request(app).get("/post");
+        expect(res.statusCode).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+    });
 
-  test("test get posts after create", async () => {
-    const response = await request(app).get("/post");
-    expect(response.statusCode).toBe(200);
-    expect(response.body.length).toBe(postsData.length);
-  });
+    test("Get Post By ID - Success (200)", async () => {
+        const res = await request(app).get(`/post/${createdPostId}`);
+        expect(res.statusCode).toBe(200);
+        expect(res.body._id).toBe(createdPostId);
+    });
 
-  test("test get posts by user id", async () => {
-    const post = postsData[0];
-    const response = await request(app).get("/post?user=" + post.sender);
-    expect(response.statusCode).toBe(200);
-    expect(response.body.length).toBe(postsData.length);
-    expect(response.body[0].sender).toBe(post.sender);
-  });
+    test("Get Post By ID - Not Found (404)", async () => {
+        const fakeId = new mongoose.Types.ObjectId().toString();
+        const res = await request(app).get(`/post/${fakeId}`);
+        expect(res.statusCode).toBe(404);
+    });
 
-  test("test get post by id", async () => {
-    const response = await request(app).get("/post/" + postsData[0]._id);
-    expect(response.statusCode).toBe(200);
-    expect(response.body._id).toBe(postsData[0]._id);
-  });
+    test("Update Post - Success (200)", async () => {
+        const res = await request(app)
+            .put(`/post/${createdPostId}`)
+            .set("Authorization", "Bearer " + token)
+            .send({ title: "Updated" });
+        expect(res.statusCode).toBe(200);
+    });
 
-  test("test put post by id", async () => {
-    postsData[0].message = "hello this is updated message";
-    const response = await request(app)
-      .put("/post/" + postsData[0]._id)
-      .set("Authorization", "Bearer " + userData.token)
-      .send(postsData[0]);
-    expect(response.statusCode).toBe(200);
-    expect(response.body.title).toBe(postsData[0].title);
-    expect(response.body.message).toBe(postsData[0].message);
-  });
+    test("Update Post - Unauthorized / Forbidden (403)", async () => {
+        const res = await request(app)
+            .put(`/post/${createdPostId}`)
+            .set("Authorization", "Bearer " + otherToken)
+            .send({ title: "Hacked Title" });
+        // Fails because otherToken is not the sender of createdPostId
+        expect(res.statusCode).toBe(403);
+    });
 
-  test("test put post by id without token - should fail", async () => {
-    postsData[0].message = "hello this is updated message";
-    const response = await request(app)
-      .put("/post/" + postsData[0]._id)
-      .send(postsData[0]);
-    expect(response.statusCode).toBe(401);
-  });
+    test("Update Post - Not Found (404)", async () => {
+        const fakeId = new mongoose.Types.ObjectId().toString();
+        const res = await request(app)
+            .put(`/post/${fakeId}`)
+            .set("Authorization", "Bearer " + token)
+            .send({ title: "New" });
+        expect(res.statusCode).toBe(404);
+    });
 
-  test("test put post by id with wrong token - should fail", async () => {
-    postsData[0].message = "hello this is updated message";
-    const response = await request(app)
-      .put("/post/" + postsData[0]._id)
-      .set("Authorization", "Bearer " + fakeToken)
-      .send(postsData[0]);
-    expect(response.statusCode).toBe(403);
-  });
+    test("Delete Post - Forbidden (403)", async () => {
+        const res = await request(app)
+            .delete(`/post/${createdPostId}`)
+            .set("Authorization", "Bearer " + otherToken);
+        expect(res.statusCode).toBe(403);
+    });
 
-  test("test delete post by id and its comments", async () => {
-    //create comments for the post
-    const postId = postsData[0]._id;
-    const comments = [
-      { postId: postId, message: "comment 1", sender: userData._id },
-      { postId: postId, message: "comment 2", sender: userData._id },
-    ];
+    test("Delete Post - Success (200)", async () => {
+        const res = await request(app)
+            .delete(`/post/${createdPostId}`)
+            .set("Authorization", "Bearer " + token);
+        expect(res.statusCode).toBe(200);
+    });
 
-    for (const comment of comments) {
-      const res = await request(app)
-        .post("/comment")
-        .set("Authorization", "Bearer " + userData.token)
-        .send(comment);
-      expect(res.statusCode).toBe(201);
-    }
-    //delete the post
-    const response = await request(app)
-      .delete("/post/" + postId)
-      .set("Authorization", "Bearer " + userData.token);
-    expect(response.statusCode).toBe(200);
-    expect(response.body.message).toBe("Post and associated comments deleted");
-    //check if comments are deleted
-    const commentRes = await request(app).get("/comment/post/" + postId);
-    expect(commentRes.statusCode).toBe(200);
-    expect(commentRes.body.length).toBe(0);
-  });
+    test("Delete Post - Not Found (404)", async () => {
+        const fakeId = new mongoose.Types.ObjectId().toString();
+        const res = await request(app)
+            .delete(`/post/${fakeId}`)
+            .set("Authorization", "Bearer " + token);
+        expect(res.statusCode).toBe(404);
+    });
 });

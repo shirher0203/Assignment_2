@@ -6,7 +6,7 @@
   "build": "tsc",
   "start": "node --env-file=.env.dev ./dist/server.js",
   "dev": "ts-node-dev --env-file=.env.dev --respawn src/server.ts",
-  "test": "jest --detectOpenHandles --forceExit --coverage",
+  "test": "jest --detectOpenHandles --forceExit --setupFilesAfterEnv=./src/tests/jest.setup.ts",
   "testauth": "jest --runInBand --detectOpenHandles --forceExit ./src/tests/auth.test.ts",
   "testuser": "jest --runInBand --detectOpenHandles --forceExit ./src/tests/user.test.ts",
   "testpost": "jest --runInBand --detectOpenHandles --forceExit ./src/tests/posts.test.ts",

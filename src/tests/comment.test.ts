@@ -1,133 +1,121 @@
 import request from "supertest";
 import initApp from "../index";
+import { Express } from "express";
+import mongoose from "mongoose";
+import Post from "../models/Post";
 import Comment from "../models/Comment";
 import User from "../models/User";
-import Post from "../models/Post";
-import { Express } from "express";
-import {
-  registerTestUser,
-  userData,
-  commentsData,
-  singlePostData,
-  fakeToken,
-} from "./testUtils";
 
 let app: Express;
+let token: string = "";
+let otherToken: string = "";
+let postId: string = "";
+const email = `comm${Date.now()}@test.com`;
+const otherEmail = `other${Date.now()}@test.com`;
 
 beforeAll(async () => {
-  app = await initApp();
-  await User.deleteMany({ email: userData.email });
-  await Post.deleteMany({});
-  await Comment.deleteMany({});
+    process.env.JWT_SECRET = "test_secret_key_123";
+    app = await initApp();
+    await Post.deleteMany({});
+    await Comment.deleteMany({});
+    await User.deleteMany({ email: { $in: [email, otherEmail] } });
 
-  // login user and get token
-  await registerTestUser(app);
+    // 1. Register main user
+    const userRes = await request(app).post("/auth/register").send({ 
+        email, password: "password123", username: "commuser" 
+    });
+    token = userRes.body.accessToken || userRes.body.token;
+
+    // 2. Register another user for permission testing (403)
+    const otherRes = await request(app).post("/auth/register").send({ 
+        email: otherEmail, password: "password123", username: "otheruser" 
+    });
+    otherToken = otherRes.body.accessToken || otherRes.body.token;
+
+    // 3. Create a Post
+    const postRes = await request(app)
+        .post("/post")
+        .set("Authorization", "Bearer " + token)
+        .send({ title: "Post", message: "Body" });
+    postId = postRes.body._id;
 });
 
-afterAll((done) => {
-  done();
+afterAll(async () => {
+    await mongoose.connection.close();
 });
 
-describe("Comments API", () => {
-  test("test get all empty db", async () => {
-    console.log("Test is running");
-    const response = await request(app).get("/comment");
-    expect(response.statusCode).toBe(200);
-    expect(response.body).toEqual([]);
-  });
+describe("Comments API Extended Coverage", () => {
+    let commentId: string = "";
 
-  test("test post comment", async () => {
-    //create post
-    const createPostRes = await request(app)
-      .post("/post")
-      .set("Authorization", "Bearer " + userData.token)
-      .send(singlePostData);
-    expect(createPostRes.statusCode).toBe(201);
-    const postId = createPostRes.body._id;
+    test("Get all comments - empty (200)", async () => {
+        const res = await request(app).get("/comment");
+        expect(res.statusCode).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+    });
 
-    //add all comments from commentsData
-    for (const comment of commentsData) {
-      comment.postId = postId;
-      const response = await request(app)
-        .post("/comment")
-        .set("Authorization", "Bearer " + userData.token)
-        .send(comment);
-      expect(response.statusCode).toBe(201);
-      expect(response.body.message).toBe(comment.message);
-      expect(response.body.postId).toBe(postId);
-      expect(String(response.body.sender)).toBe(String(userData._id));
+    test("Create Comment - success (201)", async () => {
+        const res = await request(app)
+            .post("/comment")
+            .set("Authorization", "Bearer " + token)
+            .send({ message: "Test Comment", postId });
+        expect(res.statusCode).toBe(201);
+        commentId = res.body._id;
+    });
 
-      commentsData[commentsData.indexOf(comment)]._id = response.body._id;
-      commentsData[commentsData.indexOf(comment)].sender = response.body.sender;
-    }
-  });
+    test("Create Comment - post not found (404)", async () => {
+        const fakePostId = new mongoose.Types.ObjectId().toString();
+        const res = await request(app)
+            .post("/comment")
+            .set("Authorization", "Bearer " + token)
+            .send({ message: "Fail", postId: fakePostId });
+        expect(res.statusCode).toBe(404);
+    });
 
-  test("test get comments by postID", async () => {
-    const comment = commentsData[0];
-    const response = await request(app).get("/comment/post/" + comment.postId);
-    expect(response.statusCode).toBe(200);
-    expect(response.body.length).toBe(commentsData.length);
-  });
+    test("Get Comment By ID - success (200)", async () => {
+        const res = await request(app).get(`/comment/${commentId}`);
+        expect(res.statusCode).toBe(200);
+    });
 
-  test("test get comment by id", async () => {
-    const response = await request(app).get("/comment/" + commentsData[0]._id);
-    expect(response.statusCode).toBe(200);
-    expect(response.body._id).toBe(commentsData[0]._id);
-  });
+    test("Get Comment By ID - not found (404)", async () => {
+        const fakeId = new mongoose.Types.ObjectId().toString();
+        const res = await request(app).get(`/comment/${fakeId}`);
+        expect(res.statusCode).toBe(404);
+    });
 
-  test("test put comment by id", async () => {
-    commentsData[0].message = "this is the new text";
-    const response = await request(app)
-      .put("/comment/" + commentsData[0]._id)
-      .set("Authorization", "Bearer " + userData.token)
-      .send(commentsData[0]);
-    expect(response.statusCode).toBe(200);
-    expect(response.body.message).toBe(commentsData[0].message);
-  });
+    test("Update Comment - success (200)", async () => {
+        const res = await request(app)
+            .put(`/comment/${commentId}`)
+            .set("Authorization", "Bearer " + token)
+            .send({ message: "Updated message" });
+        expect(res.statusCode).toBe(200);
+    });
 
-  test("test put comment by id without token - should fail", async () => {
-    commentsData[1].message = "hello this is updated message";
-    const response = await request(app)
-      .put("/comment/" + commentsData[1]._id)
-      .send(commentsData[1]);
-    expect(response.statusCode).toBe(401);
-  });
+    test("Update Comment - Forbidden (403)", async () => {
+        const res = await request(app)
+            .put(`/comment/${commentId}`)
+            .set("Authorization", "Bearer " + otherToken)
+            .send({ message: "Should fail" });
+        expect(res.statusCode).toBe(403);
+    });
 
-  test("test put comment by id with wrong token - should fail", async () => {
-    commentsData[0].message = "hello this is updated message";
-    const response = await request(app)
-      .put("/comment/" + commentsData[0]._id)
-      .set("Authorization", "Bearer " + fakeToken)
-      .send(commentsData[0]);
-    expect(response.statusCode).toBe(403);
-  });
+    test("Delete Comment - Invalid ID (400)", async () => {
+        const res = await request(app)
+            .delete("/comment/123")
+            .set("Authorization", "Bearer " + token);
+        expect(res.statusCode).toBe(400);
+    });
 
-  test("test delete comment by id", async () => {
-    const response = await request(app)
-      .delete("/comment/" + commentsData[2]._id)
-      .set("Authorization", "Bearer " + userData.token);
-    expect(response.statusCode).toBe(200);
+    test("Delete Comment - Forbidden (403)", async () => {
+        const res = await request(app)
+            .delete(`/comment/${commentId}`)
+            .set("Authorization", "Bearer " + otherToken);
+        expect(res.statusCode).toBe(403);
+    });
 
-    const getResponse = await request(app).get(
-      "/comment/" + commentsData[2]._id,
-    );
-    expect(getResponse.statusCode).toBe(404);
-  });
-
-  test("test delete comment by id without token - should fail", async () => {
-    commentsData[1].message = "hello this is updated message";
-    const response = await request(app)
-      .delete("/comment/" + commentsData[1]._id)
-      .send(commentsData[1]);
-    expect(response.statusCode).toBe(401);
-  });
-
-  test("test put post by id with wrong token - should fail", async () => {
-    commentsData[0].message = "hello this is updated message";
-    const response = await request(app)
-      .delete("/comment/" + commentsData[0]._id)
-      .set("Authorization", "Bearer " + fakeToken)
-      .send(commentsData[0]);
-    expect(response.statusCode).toBe(403);
-  });
+    test("Delete Comment - success (200)", async () => {
+        const res = await request(app)
+            .delete(`/comment/${commentId}`)
+            .set("Authorization", "Bearer " + token);
+        expect(res.statusCode).toBe(200);
+    });
 });

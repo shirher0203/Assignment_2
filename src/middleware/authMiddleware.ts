@@ -13,9 +13,9 @@ const authMiddleware = (
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.split(" ")[1];
-    const secret = process.env.JWT_SECRET || "secretkey";
+    const tokenSecret = process.env.JWT_SECRET || "test_secret_key_123";
     try {
-      const decoded = jwt.verify(token, secret) as { userId: string };
+      const decoded = jwt.verify(token, tokenSecret) as { userId: string };
       (req as any).user = { _id: decoded.userId };
       //
       next();
