@@ -1,9 +1,11 @@
 import express, { Express } from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+
 import postRoutes from "./routes/posts";
 import commentRoutes from "./routes/comments";
 import authRoutes from "./routes/auth";
+import userRoutes from "./routes/user";
 
 dotenv.config();
 
@@ -12,9 +14,11 @@ const app: Express = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
 app.use("/post", postRoutes);
 app.use("/comment", commentRoutes);
 app.use("/auth", authRoutes);
+app.use("/user", userRoutes);
 
 const initApp = (): Promise<Express> => {
   const pr = new Promise<Express>((resolve, reject) => {

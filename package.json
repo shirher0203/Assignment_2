@@ -2,14 +2,16 @@
   "name": "assignment_1",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": {
-    "start": "tsc && node --env-file=.env.dev ./dist/server.js",
-    "test": "tsc && jest --detectOpenHandles --forceExit",
-    "dev": "nodemon --env-file=.env.dev ./dist/server.js",
-    "testauth": "tsc && jest --runInBand --detectOpenHandles --forceExit ./src/tests/auth.test.ts",
-    "testpost": "tsc && jest --runInBand --detectOpenHandles --forceExit ./src/tests/posts.test.ts",
-    "testcomment": "tsc && jest --runInBand --detectOpenHandles --forceExit ./src/tests/comment.test.ts"
-  },
+"scripts": {
+  "build": "tsc",
+  "start": "node --env-file=.env.dev ./dist/server.js",
+  "dev": "ts-node-dev --env-file=.env.dev --respawn src/server.ts",
+  "test": "jest --detectOpenHandles --forceExit --setupFilesAfterEnv=./src/tests/jest.setup.ts",
+  "testauth": "jest --runInBand --detectOpenHandles --forceExit ./src/tests/auth.test.ts",
+  "testuser": "jest --runInBand --detectOpenHandles --forceExit ./src/tests/user.test.ts",
+  "testpost": "jest --runInBand --detectOpenHandles --forceExit ./src/tests/posts.test.ts",
+  "testcomment": "jest --runInBand --detectOpenHandles --forceExit ./src/tests/comment.test.ts"
+},
   "author": "Shir Hershkovich & Neriya Persiko",
   "license": "ISC",
   "description": "",

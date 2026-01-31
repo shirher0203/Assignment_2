@@ -1,11 +1,81 @@
+###
+# User CRUD API Tests
+# Variables
+@baseUrl = http://localhost:3000
+@accessToken =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTdiMzI3ZWI4NTg0YzY0NTVhMjVlM2EiLCJpYXQiOjE3Njk2ODE4ODYsImV4cCI6MTc2OTY4NTQ4Nn0.8hZPQL1Xm8v77jTaokAgI5TNh7UqTKqUpi6vl3i8Orc
+@userId =697b327eb8584c6455a25e3a
+@otherUserId = 697b25d2d829293db8a8c8794
+
+
 
 ###
-# Create a new post
-POST http://localhost:3000/post
+# 0. Register (create a new user for testing)
+POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-    "sender": "Bob",
+    "email": "user212322@gmail.com",
+    "password": "yourpsword1332341",
+    "username": "testuser2"
+}
+
+
+###
+# 1. Login (get JWT access token)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "user212322@gmail.com",
+    "password": "yourpsword1332341"
+}
+
+###
+# 2. Get User Profile (protected)
+GET {{baseUrl}}/user/{{userId}}
+Authorization: Bearer {{accessToken}}
+
+###
+# 3. Update User (protected)
+PUT {{baseUrl}}/user/{{userId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "username": "testuser2",
+    "password": "newPassword123"
+}
+
+###
+# 4. Security Test: Try to update another user (should return 403 Forbidden)
+# To test: Replace {{userId}} with a different user's ID and use the same accessToken.
+PUT {{baseUrl}}/user/{{otherUserId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+    "username": "hackerName"
+}
+
+###
+# 5. Delete User (protected)
+DELETE {{baseUrl}}/user/{{userId}}
+Authorization: Bearer {{accessToken}}
+
+###
+# 6. Post-Delete Check: Try to get deleted user (should return 404)
+GET {{baseUrl}}/user/{{userId}}
+Authorization: Bearer {{accessToken}}
+
+
+
+###
+# Create a new post (protected)
+POST {{baseUrl}}/post
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
     "message": "Hiii this is my post."
 }
 
@@ -21,22 +91,25 @@ GET http://localhost:3000/post/696fff7ee600df766246eb8d
 # Get posts by sender
 GET http://localhost:3000/post?sender=Bob
 
+
 ###
-# Update post message
-PUT http://localhost:3000/post/696fff7ee600df766246eb8d
+# Update post message (protected)
+PUT {{baseUrl}}/post/696fff7ee600df766246eb8d
 Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 
 {
     "message": "Updated message content."
 }
 
+
 ###
-# Create a new comment
-POST http://localhost:3000/comment
+# Create a new comment (protected)
+POST {{baseUrl}}/comment
 Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 
 {
-    "sender": "Alice",
     "message": "This is a comment!!!!",
     "postId": "6979f68000ca063f281ed4a7"
 }
@@ -49,15 +122,19 @@ GET http://localhost:3000/comment/post/696fff7ee600df766246eb8d
 # Get comment by ID
 GET http://localhost:3000/comment/69700792767b3e2e71b4a131
 
+
 ###
-# Update comment message
-PUT http://localhost:3000/comment/69727103af2af050bd7fb65b
+# Update comment message (protected)
+PUT {{baseUrl}}/comment/69727103af2af050bd7fb65b
 Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 
 {
     "message": "Updated comment message!!!"
 }
 
+
 ###
-# Delete comment by ID
-DELETE http://localhost:3000/comment/697005d2e8bb13844630bf84
+# Delete comment by ID (protected)
+DELETE {{baseUrl}}/comment/697005d2e8bb13844630bf84
+Authorization: Bearer {{accessToken}}

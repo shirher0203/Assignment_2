@@ -13,7 +13,7 @@ type UserData = {
 };
 
 export const userData: UserData = {
-  email: "test@test.com",
+  email: `test${Date.now()}${Math.floor(Math.random() * 1000)}@test.com`,
   password: "testpassword",
 };
 
@@ -64,6 +64,6 @@ export const fakeUserId = new mongoose.Types.ObjectId().toString();
 
 export const fakeToken = jwt.sign(
   { userId: fakeUserId },
-  process.env.JWT_SECRET!,
+  (process.env.JWT_SECRET || "test_secret_key"),
   { expiresIn: "1h" },
 );
